@@ -40,23 +40,45 @@ result = {}
 
 
 def store(app_id, pem):
+    """Actions secrets first (the job needs them); Infisical is the copy and may need a login.
+
+    The manifest code works once, so if GitHub refuses the secrets the key is kept in a 0600 file
+    instead of being lost.
+    """
+    try:
+        _actions_secrets(app_id, pem)
+    except (subprocess.CalledProcessError, OSError):
+        keep = os.path.expanduser('~/vuln-digest-app.pem')
+        fd = os.open(keep, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as f:
+            f.write(pem)
+        raise RuntimeError(f'gh secret set failed; App {app_id} key kept in {keep}') from None
+    _infisical(app_id, pem)
+
+
+def _actions_secrets(app_id, pem):
+    subprocess.run(['gh', 'secret', 'set', 'VULN_GITHUB_APP_ID', '--repo', REPO], input=str(app_id).encode(),
+                   check=True, capture_output=True)
+    subprocess.run(['gh', 'secret', 'set', 'VULN_GITHUB_APP_PRIVATE_KEY_PEM', '--repo', REPO], input=pem.encode(),
+                   check=True, capture_output=True)
+
+
+def _infisical(app_id, pem):
     project, env = os.environ['INFISICAL_PROJECT_ID'], os.environ.get('INFISICAL_ENVIRONMENT', 'dev')
-    subprocess.run(['infisical', 'secrets', 'folders', 'create', '--name', INFISICAL_PATH.strip('/'), '--path', '/',
-                    '--projectId', project, '--env', env, '--silent'], capture_output=True)
     fd, path = tempfile.mkstemp(suffix='.pem')
     try:
         with os.fdopen(fd, 'w') as f:
             f.write(pem)
         # KEY=@file keeps the multi-line key out of argv and out of any .env quoting.
-        subprocess.run(['infisical', 'secrets', 'set', f'VULN_GITHUB_APP_ID={app_id}',
-                        f'VULN_GITHUB_APP_PRIVATE_KEY_PEM=@{path}', '--path', INFISICAL_PATH, '--projectId', project,
-                        '--env', env, '--silent'], check=True, capture_output=True)
+        proc = subprocess.run(['infisical', 'secrets', 'set', f'VULN_GITHUB_APP_ID={app_id}',
+                               f'VULN_GITHUB_APP_PRIVATE_KEY_PEM=@{path}', '--path', INFISICAL_PATH,
+                               '--projectId', project, '--env', env, '--silent'],
+                              capture_output=True, stdin=subprocess.DEVNULL, timeout=60)
+        result['infisical'] = proc.returncode == 0
+    except subprocess.TimeoutExpired:
+        result['infisical'] = False
     finally:
         os.unlink(path)
-    subprocess.run(['gh', 'secret', 'set', 'VULN_GITHUB_APP_ID', '--repo', REPO], input=str(app_id).encode(),
-                   check=True, capture_output=True)
-    subprocess.run(['gh', 'secret', 'set', 'VULN_GITHUB_APP_PRIVATE_KEY_PEM', '--repo', REPO], input=pem.encode(),
-                   check=True, capture_output=True)
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -87,7 +109,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 result['install'] = f'{app["html_url"]}/installations/new'
                 self.reply('App created and stored. You can close this tab and return to the terminal.')
             except Exception as exc:  # noqa: BLE001
-                result['error'] = type(exc).__name__
+                # RuntimeError carries our own message (no secret); anything else only its type.
+                result['error'] = str(exc) if isinstance(exc, RuntimeError) else type(exc).__name__
                 self.reply('Something failed; see the terminal.')
             done.set()
 
@@ -103,7 +126,9 @@ def main():
     server.shutdown()
     if 'error' in result:
         sys.exit(f'failed: {result["error"]}')
-    print('Stored VULN_GITHUB_APP_ID and VULN_GITHUB_APP_PRIVATE_KEY_PEM (Infisical /vuln-digest and Actions secrets).')
+    print('Stored VULN_GITHUB_APP_ID and VULN_GITHUB_APP_PRIVATE_KEY_PEM in the Actions secrets.')
+    if not result.get('infisical'):
+        print('Infisical copy NOT written (log in, then copy the secrets to /vuln-digest).')
     print(f'Now install it: {result["install"]}')
 
 
