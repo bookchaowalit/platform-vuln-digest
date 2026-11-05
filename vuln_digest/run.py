@@ -16,7 +16,8 @@ OK, PROVIDER_FAILED, NOTIFY_FAILED = 0, 2, 3
 def live_findings(env):
     gh = GitHub()
     if env.get('VULN_GITHUB_APP_ID'):
-        repos = gh.app_repositories(app_jwt(env['VULN_GITHUB_APP_ID'], env['VULN_GITHUB_APP_PRIVATE_KEY_PEM']))
+        owners = env.get('VULN_OWNERS', '').replace('\n', ',').split(',')
+        repos = gh.app_repositories(app_jwt(env['VULN_GITHUB_APP_ID'], env['VULN_GITHUB_APP_PRIVATE_KEY_PEM']), owners)
     elif env.get('VULN_GITHUB_TOKEN'):  # local runs only
         repos = gh.user_repositories(env['VULN_GITHUB_TOKEN'])
     else:

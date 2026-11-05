@@ -79,10 +79,19 @@ class GitHub:
             match = _NEXT.search(headers.get('link', ''))
             url = match.group(1) if match else None
 
-    def app_repositories(self, jwt):
-        """(installation token, repository) for every repository of every installation of the App."""
+    def app_repositories(self, jwt, owners):
+        """(installation token, repository) for every repository of the installations on `owners`.
+
+        The App must be public to be installable on the organizations, so anyone could install it:
+        installations on any other account are skipped before a token is minted (R1).
+        """
+        allowed = {o.strip().lower() for o in owners if o.strip()}
+        if not allowed:
+            raise ProviderError('missing VULN_OWNERS')
         out = []
         for inst in self._pages(f'{API}/app/installations?per_page=100', jwt, 'installations'):
+            if ((inst.get('account') or {}).get('login') or '').lower() not in allowed:
+                continue
             status, body, _ = self.fetch('POST', f'{API}/app/installations/{inst["id"]}/access_tokens', jwt, TIMEOUT)
             if status != 201:
                 raise ProviderError(f'installation token: HTTP {status}')

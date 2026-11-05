@@ -15,7 +15,8 @@ carry far more than read access.
 
 Turn on Dependabot alerts (not security-update pull requests) on every own repository, and read
 them with a dedicated GitHub App holding only `Dependabot alerts: read` and `Metadata: read`,
-installed on each owner. The job is the posture-monitor pattern: diff with R2 state, Telegram on
+installed on each owner. The App is public, because GitHub installs a private App only on its
+owning account; the job reads only installations on the `VULN_OWNERS` secret. The job is the posture-monitor pattern: diff with R2 state, Telegram on
 change, heartbeat.
 
 ## Consequences

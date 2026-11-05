@@ -5,10 +5,12 @@
 Opens a local page that posts the manifest to GitHub. After you press "Create GitHub App",
 GitHub redirects back here; the script converts the code, then writes the App id and private key
 to Infisical `/vuln-digest` and to this repository's Actions secrets without printing them, and
-prints the install link. Install the App on your account and each own organization (not
-Happy-Teeth or bookchaowalit-freelance), "All repositories".
+prints the install link. Install the App on your account and on each organization listed in the
+`VULN_OWNERS` secret, "All repositories".
 
-Permissions: Dependabot alerts read, Metadata read (SPEC-001 R1). No webhook.
+Permissions: Dependabot alerts read, Metadata read (SPEC-001 R1). No webhook. The App is public
+because GitHub lets a private App be installed only on the account that owns it; the digest reads
+only installations on `VULN_OWNERS`, so an install anywhere else gives that account nothing.
 """
 import http.server
 import json
@@ -29,7 +31,7 @@ MANIFEST = {
     'url': f'https://github.com/{REPO}',
     'hook_attributes': {'url': f'https://github.com/{REPO}', 'active': False},
     'redirect_url': f'http://127.0.0.1:{PORT}/callback',
-    'public': False,
+    'public': True,  # installable on the organizations; see the module docstring
     'default_permissions': {'vulnerability_alerts': 'read', 'metadata': 'read'},
     'default_events': [],
 }

@@ -2,7 +2,7 @@
 title: "SPEC-001 Dependency vulnerability digest"
 status: accepted
 created: 2026-11-04
-updated: 2026-11-04
+updated: 2026-11-05
 description: Daily read-only sweep of GitHub Dependabot alerts across every own repository that alerts only on changes.
 ---
 
@@ -42,7 +42,9 @@ secret scanning alerts, an audit event per change (`security-api`, as posture-mo
 ## Requirements
 
 - **R1 Read-only.** The GitHub App holds only `Dependabot alerts: read` and `Metadata: read`.
-  The job never changes a repository. Its other credentials are R2 object access to one
+  The App is public (GitHub allows a private App only on its owning account), so the job reads
+  only installations whose account is in the `VULN_OWNERS` secret and skips every other one
+  before minting a token; an empty list fails the run. The job never changes a repository. Its other credentials are R2 object access to one
   bucket (`vuln-digest`), Telegram and the heartbeat token.
 - **R2 Public log stays quiet.** The repository is public and many scanned repositories are
   private, so the job log and step summary print only counts per severity and the exit

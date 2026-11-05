@@ -29,9 +29,10 @@ with counts and the repositories with the most critical and high alerts.
 - A failed or missed run alerts through the uptime Worker heartbeat `vuln-digest` (30 h).
 - Credentials (Infisical `/vuln-digest`, mirrored to Actions secrets): the GitHub App
   `bookchaowalit-vuln-digest` (Dependabot alerts read, Metadata read), R2 keys for the one bucket,
-  `TELEGRAM_*` (book_noti_bot), `HEARTBEAT_TOKEN`, and `VULN_EXCLUDE`, the comma list of
-  `owner/*` or `owner/repo` that are never read (client and hands-off repositories; a secret so
-  this public repository names no client).
+  `TELEGRAM_*` (book_noti_bot), `HEARTBEAT_TOKEN`, `VULN_OWNERS` (the accounts whose
+  installations are read; the App is public so it can be installed on organizations) and
+  `VULN_EXCLUDE`, the comma list of `owner/*` or `owner/repo` that are never read (client and
+  hands-off repositories). Both are secrets so this public repository names no client.
 
 ## Run locally
 
@@ -51,5 +52,5 @@ lint: `ruff check .`.
 
 1. `python3 scripts/create_app.py` (owner): creates the App with the manifest flow and stores
    its id and key without printing them.
-2. Install the App on the personal account and each own organization, "All repositories".
+2. Install the App on each account in `VULN_OWNERS`, "All repositories".
 3. Run the workflow once by hand (`gh workflow run digest.yml`); the first run sends the baseline.

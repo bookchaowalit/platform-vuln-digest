@@ -42,6 +42,7 @@ jobs:
         env:
           VULN_GITHUB_APP_ID: ${{ secrets.VULN_GITHUB_APP_ID }}
           VULN_GITHUB_APP_PRIVATE_KEY_PEM: ${{ secrets.VULN_GITHUB_APP_PRIVATE_KEY_PEM }}
+          VULN_OWNERS: ${{ secrets.VULN_OWNERS }}
           VULN_EXCLUDE: ${{ secrets.VULN_EXCLUDE }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
