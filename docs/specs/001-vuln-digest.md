@@ -43,8 +43,10 @@ secret scanning alerts, an audit event per change (`security-api`, as posture-mo
 
 - **R1 Read-only.** The GitHub App holds only `Dependabot alerts: read` and `Metadata: read`.
   The App is public (GitHub allows a private App only on its owning account), so the job reads
-  only installations whose account is in the `VULN_OWNERS` secret and skips every other one
-  before minting a token; an empty list fails the run. The job never changes a repository. Its other credentials are R2 object access to one
+  only installations whose account id is in the `VULN_OWNERS` secret (`label:account_id`; ids,
+  because a renamed login can be registered by someone else) and skips every other one before
+  minting a token; an empty or malformed list fails the run. An owner on the list with no
+  installation is an `app-not-installed` finding (medium), so a missed install is reported. The job never changes a repository. Its other credentials are R2 object access to one
   bucket (`vuln-digest`), Telegram and the heartbeat token.
 - **R2 Public log stays quiet.** The repository is public and many scanned repositories are
   private, so the job log and step summary print only counts per severity and the exit

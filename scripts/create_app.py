@@ -6,7 +6,7 @@ Opens a local page that posts the manifest to GitHub. After you press "Create Gi
 GitHub redirects back here; the script converts the code, then writes the App id and private key
 to Infisical `/vuln-digest` and to this repository's Actions secrets without printing them, and
 prints the install link. Install the App on your account and on each organization listed in the
-`VULN_OWNERS` secret, "All repositories".
+`VULN_OWNERS` secret (`label:account_id` pairs), "All repositories".
 
 Permissions: Dependabot alerts read, Metadata read (SPEC-001 R1). No webhook. The App is public
 because GitHub lets a private App be installed only on the account that owns it; the digest reads
@@ -65,6 +65,13 @@ def _actions_secrets(app_id, pem):
 
 def _infisical(app_id, pem):
     project, env = os.environ['INFISICAL_PROJECT_ID'], os.environ.get('INFISICAL_ENVIRONMENT', 'dev')
+    try:  # the folder may exist already; a failure here shows up as the set failing below
+        subprocess.run(['infisical', 'secrets', 'folders', 'create', '--name', INFISICAL_PATH.strip('/'), '--path', '/',
+                        '--projectId', project, '--env', env, '--silent'], capture_output=True,
+                       stdin=subprocess.DEVNULL, timeout=60)
+    except subprocess.TimeoutExpired:
+        result['infisical'] = False
+        return
     fd, path = tempfile.mkstemp(suffix='.pem')
     try:
         with os.fdopen(fd, 'w') as f:

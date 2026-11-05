@@ -6,8 +6,8 @@ import sys
 import urllib.request
 from pathlib import Path
 
-from .checks import sweep
-from .github import GitHub, ProviderError, app_jwt
+from .checks import not_installed, sweep
+from .github import GitHub, ProviderError, app_jwt, parse_owners
 from .report import NOTIFY_MIN, diff, dump_state, load_pending, load_state, message, public_summary
 
 OK, PROVIDER_FAILED, NOTIFY_FAILED = 0, 2, 3
@@ -16,14 +16,16 @@ OK, PROVIDER_FAILED, NOTIFY_FAILED = 0, 2, 3
 def live_findings(env):
     gh = GitHub()
     if env.get('VULN_GITHUB_APP_ID'):
-        owners = env.get('VULN_OWNERS', '').replace('\n', ',').split(',')
-        repos = gh.app_repositories(app_jwt(env['VULN_GITHUB_APP_ID'], env['VULN_GITHUB_APP_PRIVATE_KEY_PEM']), owners)
+        owners = parse_owners(env.get('VULN_OWNERS', ''))
+        repos, missing = gh.app_repositories(app_jwt(env['VULN_GITHUB_APP_ID'], env['VULN_GITHUB_APP_PRIVATE_KEY_PEM']),
+                                             owners)
     elif env.get('VULN_GITHUB_TOKEN'):  # local runs only
-        repos = gh.user_repositories(env['VULN_GITHUB_TOKEN'])
+        repos, missing = gh.user_repositories(env['VULN_GITHUB_TOKEN']), []
     else:
         raise ProviderError('missing VULN_GITHUB_APP_ID or VULN_GITHUB_TOKEN')
     exclude = [p for p in env.get('VULN_EXCLUDE', '').replace('\n', ',').split(',') if p.strip()]
-    return sweep(repos, gh.alerts, exclude)
+    found, scanned = sweep(repos, gh.alerts, exclude)
+    return found + not_installed(missing), scanned
 
 
 def telegram(env):

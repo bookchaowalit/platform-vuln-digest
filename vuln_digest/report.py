@@ -50,19 +50,21 @@ def _rank(f):
 
 
 def _counts(findings):
+    """Alert counts per severity, plus the coverage gaps: repos with alerts off, owners without the App."""
     counts = {s: 0 for s in SEVERITY_ORDER}
-    disabled = 0
+    gaps = {'alerts-disabled': 0, 'app-not-installed': 0}
     for f in findings:
-        if f.rule == 'alerts-disabled':
-            disabled += 1
+        if f.rule in gaps:
+            gaps[f.rule] += 1
         else:
             counts[f.severity] += 1
-    return counts, disabled
+    return counts, gaps
 
 
 def _head(title, current):
-    c, disabled = _counts(current)
-    off = f', alerts off in {disabled} repos' if disabled else ''
+    c, gaps = _counts(current)
+    off = f', alerts off in {gaps["alerts-disabled"]} repos' if gaps['alerts-disabled'] else ''
+    off += f', App missing on {gaps["app-not-installed"]} owners' if gaps['app-not-installed'] else ''
     return f'{title} (open: {c["critical"]} critical, {c["high"]} high, {c["medium"]} medium, {c["low"]} low{off})'
 
 
@@ -112,7 +114,7 @@ def message(opened, resolved, current, first_run, notify_min=NOTIFY_MIN):
 
 
 def public_summary(current, opened, resolved, scanned):
-    counts, disabled = _counts(current)
-    return json.dumps({**counts, 'alerts_disabled': disabled, 'opened': opened, 'resolved': resolved,
-                       'repos_scanned': scanned})
+    counts, gaps = _counts(current)
+    return json.dumps({**counts, 'alerts_disabled': gaps['alerts-disabled'], 'app_not_installed': gaps['app-not-installed'],
+                       'opened': opened, 'resolved': resolved, 'repos_scanned': scanned})
 

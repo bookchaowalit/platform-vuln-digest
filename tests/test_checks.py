@@ -1,6 +1,6 @@
 import unittest
 
-from vuln_digest.checks import excluded, findings_for, sweep
+from vuln_digest.checks import excluded, findings_for, not_installed, sweep
 from vuln_digest.github import ProviderError
 
 from .test_github import alert
@@ -17,6 +17,12 @@ class Findings(unittest.TestCase):
     def test_disabled_alerts_are_one_medium_finding(self):  # AC2
         [f] = findings_for('o/r', None)
         self.assertEqual((f.id, f.severity), ('alerts-disabled:o/r', 'medium'))
+
+
+class NotInstalled(unittest.TestCase):
+    def test_owner_without_installation_is_a_finding(self):
+        [f] = not_installed(['org'])
+        self.assertEqual((f.id, f.severity), ('app-not-installed:org', 'medium'))
 
 
 class Exclusion(unittest.TestCase):

@@ -25,6 +25,22 @@ class ProviderError(Exception):
     pass
 
 
+def parse_owners(text):
+    """`label:account_id` pairs, comma or newline separated -> {account id: label}. Fails closed."""
+    owners = {}
+    for item in text.replace('\n', ',').split(','):
+        item = item.strip()
+        if not item:
+            continue
+        label, _, raw = item.rpartition(':')
+        if not label or not raw.isdigit():
+            raise ProviderError('VULN_OWNERS entries must be label:account_id')
+        owners[int(raw)] = label
+    if not owners:
+        raise ProviderError('missing VULN_OWNERS')
+    return owners
+
+
 def _b64(data):
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode()
 
@@ -80,25 +96,28 @@ class GitHub:
             url = match.group(1) if match else None
 
     def app_repositories(self, jwt, owners):
-        """(installation token, repository) for every repository of the installations on `owners`.
+        """(pairs, missing): (installation token, repository) for the installations on `owners`, and the
+        labels of owners that have no installation (so a skipped install is reported, not silent).
 
         The App must be public to be installable on the organizations, so anyone could install it:
-        installations on any other account are skipped before a token is minted (R1).
+        an installation is used only when its account id is in `owners` ({account id: label}), checked
+        before a token is minted. Ids, not logins: a renamed login can be registered by someone else (R1).
         """
-        allowed = {o.strip().lower() for o in owners if o.strip()}
-        if not allowed:
+        if not owners:
             raise ProviderError('missing VULN_OWNERS')
-        out = []
+        out, seen = [], set()
         for inst in self._pages(f'{API}/app/installations?per_page=100', jwt, 'installations'):
-            if ((inst.get('account') or {}).get('login') or '').lower() not in allowed:
+            account_id = (inst.get('account') or {}).get('id')
+            if account_id not in owners:
                 continue
+            seen.add(account_id)
             status, body, _ = self.fetch('POST', f'{API}/app/installations/{inst["id"]}/access_tokens', jwt, TIMEOUT)
             if status != 201:
                 raise ProviderError(f'installation token: HTTP {status}')
             token = body['token']
             out += [(token, r) for r in self._pages(f'{API}/installation/repositories?per_page=100', token,
                                                     'repositories', key='repositories')]
-        return out
+        return out, sorted(label for i, label in owners.items() if i not in seen)
 
     def user_repositories(self, token):
         """Local runs with a personal token: the repositories the user owns or reaches through an org."""

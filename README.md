@@ -16,6 +16,7 @@ this catches a new advisory for code that has not changed.
 |---|---|---|
 | `dependabot` | the advisory's | an open Dependabot alert |
 | `alerts-disabled` | medium | Dependabot alerts are turned off for the repository |
+| `app-not-installed` | medium | an account in `VULN_OWNERS` has no installation of the App |
 
 Telegram lists opened and resolved findings at `medium` and above (`--notify-min` /
 `VULN_NOTIFY_MIN`), grouped by repository; `low` is counted only. The first run sends a baseline
@@ -29,8 +30,8 @@ with counts and the repositories with the most critical and high alerts.
 - A failed or missed run alerts through the uptime Worker heartbeat `vuln-digest` (30 h).
 - Credentials (Infisical `/vuln-digest`, mirrored to Actions secrets): the GitHub App
   `bookchaowalit-vuln-digest` (Dependabot alerts read, Metadata read), R2 keys for the one bucket,
-  `TELEGRAM_*` (book_noti_bot), `HEARTBEAT_TOKEN`, `VULN_OWNERS` (the accounts whose
-  installations are read; the App is public so it can be installed on organizations) and
+  `TELEGRAM_*` (book_noti_bot), `HEARTBEAT_TOKEN`, `VULN_OWNERS` (`label:account_id` pairs of the
+  accounts whose installations are read, matched by id; the App is public so it can be installed on organizations) and
   `VULN_EXCLUDE`, the comma list of `owner/*` or `owner/repo` that are never read (client and
   hands-off repositories). Both are secrets so this public repository names no client.
 

@@ -38,6 +38,11 @@ def findings_for(repo, alerts):
     return out
 
 
+def not_installed(labels):
+    return [Finding('app-not-installed', 'medium', label, f'app-not-installed:{label}',
+                    'the digest App is not installed here, so its repositories are not read') for label in labels]
+
+
 def excluded(full_name, patterns):
     name = full_name.lower()
     owner = name.split('/', 1)[0]

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from vuln_digest.github import API, GitHub, ProviderError, app_jwt
+from vuln_digest.github import API, GitHub, ProviderError, app_jwt, parse_owners
 
 
 class FakeHttp:
@@ -56,29 +56,34 @@ class Alerts(unittest.TestCase):
 class AppAuth(unittest.TestCase):
     def test_repositories_of_every_installation(self):
         http = FakeHttp({
-            f'{API}/app/installations?per_page=100': (200, [{'id': 7, 'account': {'login': 'me'}}, {'id': 9, 'account': {'login': 'org'}}], {}),
+            f'{API}/app/installations?per_page=100': (200, [{'id': 7, 'account': {'login': 'me', 'id': 1}},
+                                                             {'id': 9, 'account': {'login': 'org', 'id': 2}}], {}),
             f'{API}/app/installations/7/access_tokens': (201, {'token': 't7'}, {}),
             f'{API}/app/installations/9/access_tokens': (201, {'token': 't9'}, {}),
             f'{API}/installation/repositories?per_page=100': (200, {'repositories': [{'full_name': 'o/a'}]}, {}),
         })
-        got = GitHub(http).app_repositories('jwt', ['me', 'org'])
+        got, missing = GitHub(http).app_repositories('jwt', parse_owners('me:1,org:2'))
         self.assertEqual([(token, r['full_name']) for token, r in got], [('t7', 'o/a'), ('t9', 'o/a')])
+        self.assertEqual(missing, [])
         self.assertEqual(http.calls[0][2], 'jwt')
 
-    def test_installations_outside_the_owner_list_are_never_read(self):  # R1: the App is public
+    def test_installations_are_matched_by_account_id_not_login(self):  # R1: logins can be renamed and reused
         http = FakeHttp({
-            f'{API}/app/installations?per_page=100': (200, [{'id': 7, 'account': {'login': 'Me'}},
-                                                             {'id': 8, 'account': {'login': 'stranger'}}], {}),
+            f'{API}/app/installations?per_page=100': (200, [{'id': 7, 'account': {'login': 'me', 'id': 1}},
+                                                             {'id': 8, 'account': {'login': 'org', 'id': 99}}], {}),
             f'{API}/app/installations/7/access_tokens': (201, {'token': 't7'}, {}),
             f'{API}/installation/repositories?per_page=100': (200, {'repositories': [{'full_name': 'me/a'}]}, {}),
         })
-        got = GitHub(http).app_repositories('jwt', ['me'])
+        got, missing = GitHub(http).app_repositories('jwt', parse_owners('me:1,org:2'))
         self.assertEqual([r['full_name'] for _, r in got], ['me/a'])
         self.assertNotIn(f'{API}/app/installations/8/access_tokens', [c[1] for c in http.calls])
+        self.assertEqual(missing, ['org'])  # its real account (id 2) has no installation
 
-    def test_an_empty_owner_list_fails_closed(self):
-        with self.assertRaises(ProviderError):
-            GitHub(FakeHttp({})).app_repositories('jwt', [])
+    def test_owner_list_must_be_label_and_id(self):
+        self.assertEqual(parse_owners(' me:1 ,\norg:2,'), {1: 'me', 2: 'org'})
+        for bad in ('', 'me', 'me:x'):
+            with self.assertRaises(ProviderError):
+                parse_owners(bad)
 
     def test_jwt_is_rs256_signed_by_openssl(self):
         d = Path(tempfile.mkdtemp())
