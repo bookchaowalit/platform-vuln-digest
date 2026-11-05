@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import urllib.parse
 import urllib.request
 import webbrowser
@@ -43,13 +44,15 @@ def store(app_id, pem):
     """Actions secrets first (the job needs them); Infisical is the copy and may need a login.
 
     The manifest code works once, so if GitHub refuses the secrets the key is kept in a 0600 file
-    instead of being lost.
+    instead of being lost (`~/vuln-digest-app-<id>-<time>.pem`).
     """
     try:
         _actions_secrets(app_id, pem)
     except (subprocess.CalledProcessError, OSError):
-        keep = os.path.expanduser('~/vuln-digest-app.pem')
-        fd = os.open(keep, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        # A new file each time (O_EXCL): an existing file keeps its own mode, so it is never reused.
+        keep = os.path.expanduser(f'~/vuln-digest-app-{app_id}-{int(time.time())}.pem')
+        fd = os.open(keep, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        os.fchmod(fd, 0o600)  # umask cannot widen it, but be explicit
         with os.fdopen(fd, 'w') as f:
             f.write(pem)
         raise RuntimeError(f'gh secret set failed; App {app_id} key kept in {keep}') from None
