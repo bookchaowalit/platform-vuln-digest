@@ -86,14 +86,26 @@ def _grouped(items, icon):
 
 
 def _resolved_summary(resolved):
-    """Fixed alerts need no action: one line with counts and the most common packages, not every alert."""
-    repos = {f['repo'] for f in resolved}
-    packages = defaultdict(int)
-    for f in resolved:
-        packages[f['subject'].split(' ', 1)[0]] += 1
-    top = sorted(packages.items(), key=lambda kv: (-kv[1], kv[0]))[:4]
-    more = f' +{len(packages) - len(top)}' if len(packages) > len(top) else ''
-    return f'✅ ปิดแล้ว {len(resolved)} รายการใน {len(repos)} repo: ' + ', '.join(f'{p} ×{n}' for p, n in top) + more
+    """Fixed alerts need no action: one count line with the most common packages, not every alert.
+    Coverage findings (alerts turned back on, App installed) are not packages and get their own line."""
+    alerts = [f for f in resolved if f.get('rule', 'dependabot') == 'dependabot']
+    lines = []
+    if alerts:
+        repos = {f['repo'] for f in alerts}
+        packages = defaultdict(int)
+        for f in alerts:
+            packages[f['subject'].split(' ', 1)[0]] += 1
+        top = sorted(packages.items(), key=lambda kv: (-kv[1], kv[0]))[:4]
+        more = f' +{len(packages) - len(top)}' if len(packages) > len(top) else ''
+        lines.append(f'✅ ปิดแล้ว {len(alerts)} รายการใน {len(repos)} repo: '
+                     + ', '.join(f'{p} ×{n}' for p, n in top) + more)
+    on = sorted({f['repo'] for f in resolved if f.get('rule') == 'alerts-disabled'})
+    if on:
+        lines.append(f'✅ เปิด alert แล้ว {len(on)} repo: ' + ', '.join(on[:5]) + (f' +{len(on) - 5}' if len(on) > 5 else ''))
+    app = sorted({f['repo'] for f in resolved if f.get('rule') == 'app-not-installed'})
+    if app:
+        lines.append(f'✅ ติดตั้ง App แล้ว {len(app)} owner: ' + ', '.join(app[:5]))
+    return lines
 
 
 def _finish(lines):
@@ -137,7 +149,7 @@ def message(opened, resolved, current, first_run, notify_min=NOTIFY_MIN):
         lines.append('\nเปิดใหม่')
         lines += _grouped(opened, lambda f: ICON[f['severity']])
     if resolved:
-        lines += ['', _resolved_summary([f if isinstance(f, dict) else f.as_dict() for f in resolved])]
+        lines += ['', *_resolved_summary([f if isinstance(f, dict) else f.as_dict() for f in resolved])]
     return _finish(lines)
 
 

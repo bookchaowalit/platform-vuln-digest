@@ -44,6 +44,12 @@ class Message(unittest.TestCase):
         self.assertIn('✅ ปิดแล้ว 6 รายการใน 2 repo: soupsieve ×6', text)
         self.assertNotIn('GHSA-1', text)
 
+    def test_coverage_fix_is_not_counted_as_a_package(self):
+        text = message([], [OFF.as_dict(), CRIT.as_dict()], [], first_run=False)
+        self.assertIn('✅ ปิดแล้ว 1 รายการใน 1 repo: lib ×1', text)
+        self.assertIn('✅ เปิด alert แล้ว 1 repo: me/web', text)
+        self.assertNotIn('Dependabot ×', text)
+
     def test_same_advisory_in_two_manifests_shows_once(self):
         twins = [Finding('dependabot', 'medium', 'me/api', f'dependabot:me/api#{i}', 'lib (pip) GHSA-9 fix 2') for i in (1, 2)]
         text = message(twins, [], twins, first_run=False)
