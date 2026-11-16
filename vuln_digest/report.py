@@ -69,6 +69,7 @@ def _head(title, current):
 
 
 def _grouped(items, icon):
+    """Repo, then one line per distinct subject; the same advisory in several manifests shows once with ×n."""
     by_repo = defaultdict(list)
     for f in items:
         f = f if isinstance(f, dict) else f.as_dict()
@@ -76,8 +77,23 @@ def _grouped(items, icon):
     lines = []
     for repo in sorted(by_repo, key=lambda r: (min(_rank(f) for f in by_repo[r]), r)):
         lines.append(repo)
-        lines += [f'  {icon(f)} {f["subject"]}' for f in sorted(by_repo[repo], key=lambda f: (_rank(f), f['id']))]
+        seen = {}
+        for f in sorted(by_repo[repo], key=lambda f: (_rank(f), f['id'])):
+            key = (icon(f), f['subject'])
+            seen[key] = seen.get(key, 0) + 1
+        lines += [f'  {i} {subject}' + (f' ×{n}' if n > 1 else '') for (i, subject), n in seen.items()]
     return lines
+
+
+def _resolved_summary(resolved):
+    """Fixed alerts need no action: one line with counts and the most common packages, not every alert."""
+    repos = {f['repo'] for f in resolved}
+    packages = defaultdict(int)
+    for f in resolved:
+        packages[f['subject'].split(' ', 1)[0]] += 1
+    top = sorted(packages.items(), key=lambda kv: (-kv[1], kv[0]))[:4]
+    more = f' +{len(packages) - len(top)}' if len(packages) > len(top) else ''
+    return f'✅ ปิดแล้ว {len(resolved)} รายการใน {len(repos)} repo: ' + ', '.join(f'{p} ×{n}' for p, n in top) + more
 
 
 def _finish(lines):
@@ -103,13 +119,25 @@ def message(opened, resolved, current, first_run, notify_min=NOTIFY_MIN):
     resolved = [f for f in resolved if _rank(f) <= limit]
     if not opened and not resolved:
         return None
-    lines = [_head('Vuln digest: changes', current)]
+    c, gaps = _counts(current)
+    opened_by = defaultdict(int)
+    for f in opened:
+        opened_by[f.severity] += 1
+    bits = [f'{ICON[sev]} {opened_by[sev]} {sev}' for sev in SEVERITY_ORDER if opened_by[sev]]
+    title = '🛡️ Vuln · ' + (' · '.join(bits) + ' เปิดใหม่' if bits else 'ไม่มีรายการใหม่')
+    if resolved:
+        title += f' · ✅ {len(resolved)} ปิดแล้ว'
+    still = f'คงเปิด: {c["critical"]} critical · {c["high"]} high · {c["medium"]} medium · {c["low"]} low'
+    if gaps['alerts-disabled']:
+        still += f' · ⚠️ alert ปิดอยู่ {gaps["alerts-disabled"]} repo'
+    if gaps['app-not-installed']:
+        still += f' · ⚠️ App ยังไม่ติดตั้ง {gaps["app-not-installed"]} owner'
+    lines = [title, still]
     if opened:
-        lines.append('\nOpened:')
+        lines.append('\nเปิดใหม่')
         lines += _grouped(opened, lambda f: ICON[f['severity']])
     if resolved:
-        lines.append('\nResolved:')
-        lines += _grouped(resolved, lambda f: '✅')
+        lines += ['', _resolved_summary([f if isinstance(f, dict) else f.as_dict() for f in resolved])]
     return _finish(lines)
 
 

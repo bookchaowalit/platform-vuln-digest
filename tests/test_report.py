@@ -35,11 +35,20 @@ class Message(unittest.TestCase):
         self.assertIn('GHSA-1', text)
         self.assertNotIn('GHSA-2', text)  # low: counted only
         self.assertIn('1 critical', text)
+        self.assertTrue(text.startswith('🛡️ Vuln · 🟣 1 critical'))
 
-    def test_resolved_listed(self):
-        text = message([], [CRIT.as_dict()], [], first_run=False)
-        self.assertIn('Resolved', text)
-        self.assertIn('GHSA-1', text)
+    def test_resolved_is_one_count_line(self):
+        resolved = [Finding('dependabot', 'medium', f'me/r{i % 2}', f'dependabot:me/r{i % 2}#{i}', f'soupsieve (pip) GHSA-{i}').as_dict()
+                    for i in range(6)]
+        text = message([], resolved, [], first_run=False)
+        self.assertIn('✅ ปิดแล้ว 6 รายการใน 2 repo: soupsieve ×6', text)
+        self.assertNotIn('GHSA-1', text)
+
+    def test_same_advisory_in_two_manifests_shows_once(self):
+        twins = [Finding('dependabot', 'medium', 'me/api', f'dependabot:me/api#{i}', 'lib (pip) GHSA-9 fix 2') for i in (1, 2)]
+        text = message(twins, [], twins, first_run=False)
+        self.assertEqual(text.count('GHSA-9'), 1)
+        self.assertIn('GHSA-9 fix 2 ×2', text)
 
     def test_baseline_lists_repos_not_every_alert(self):  # R3
         many = [Finding('dependabot', 'high', f'me/r{i % 3}', f'dependabot:me/r{i % 3}#{i}', f'p{i}')
