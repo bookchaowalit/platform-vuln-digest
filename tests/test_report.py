@@ -47,7 +47,7 @@ class Message(unittest.TestCase):
     def test_coverage_fix_is_not_counted_as_a_package(self):
         text = message([], [OFF.as_dict(), CRIT.as_dict()], [], first_run=False)
         self.assertIn('✅ ปิดแล้ว 1 รายการใน 1 repo: lib ×1', text)
-        self.assertIn('✅ เปิด alert แล้ว 1 repo: me/web', text)
+        self.assertIn('⚪ ไม่พบแล้วในรอบนี้ (alert ปิดอยู่) 1 repo: me/web', text)
         self.assertNotIn('Dependabot ×', text)
 
     def test_same_advisory_in_two_manifests_shows_once(self):

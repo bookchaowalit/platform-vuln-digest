@@ -87,7 +87,8 @@ def _grouped(items, icon):
 
 def _resolved_summary(resolved):
     """Fixed alerts need no action: one count line with the most common packages, not every alert.
-    Coverage findings (alerts turned back on, App installed) are not packages and get their own line."""
+    Coverage findings are not packages and get their own neutral line: a gap that is gone from this scan may
+    have been fixed, or its repo archived or excluded, so it is not reported as fixed."""
     alerts = [f for f in resolved if f.get('rule', 'dependabot') == 'dependabot']
     lines = []
     if alerts:
@@ -101,10 +102,10 @@ def _resolved_summary(resolved):
                      + ', '.join(f'{p} ×{n}' for p, n in top) + more)
     on = sorted({f['repo'] for f in resolved if f.get('rule') == 'alerts-disabled'})
     if on:
-        lines.append(f'✅ เปิด alert แล้ว {len(on)} repo: ' + ', '.join(on[:5]) + (f' +{len(on) - 5}' if len(on) > 5 else ''))
+        lines.append(f'⚪ ไม่พบแล้วในรอบนี้ (alert ปิดอยู่) {len(on)} repo: ' + ', '.join(on[:5]) + (f' +{len(on) - 5}' if len(on) > 5 else ''))
     app = sorted({f['repo'] for f in resolved if f.get('rule') == 'app-not-installed'})
     if app:
-        lines.append(f'✅ ติดตั้ง App แล้ว {len(app)} owner: ' + ', '.join(app[:5]))
+        lines.append(f'⚪ ไม่พบแล้วในรอบนี้ (App ยังไม่ติดตั้ง) {len(app)} owner: ' + ', '.join(app[:5]))
     return lines
 
 
