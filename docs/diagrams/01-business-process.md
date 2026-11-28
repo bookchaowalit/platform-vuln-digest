@@ -73,10 +73,13 @@ Sources: `docs/specs/001-vuln-digest.md` §Outcome, §Requirements R1–R7, §La
 |---|---|---|---|---|
 | G1 | ไม่มีการเตือนซ้ำ alert เก่า → reminder รายสัปดาห์ของ critical / high ที่ค้างเกิน 14 วัน | todo | claude | spec §Later; ไม่พบใน `vuln_digest/` |
 | G2 | ไม่มี audit event ต่อการเปลี่ยนแปลง → `security-api` audit event ต่อ finding ที่เปิด / ปิด (แบบ posture-monitor) | todo | claude | spec §Scope "Out of scope for v1", §Later |
-| G3 | digest รายงานอย่างเดียว ไม่มีใครเปิด fix PR → Renovate เปิด PR แก้ (owner ตัดสิน 2026-11-28: ใช้ Renovate). 2026-11-28 ยังไม่ยืนยันว่าติดตั้ง app แล้วหรือยัง (ไม่พบ PR จาก `renovate[bot]` ใน owner `bookchaowalit` แต่ข้อนี้ไม่ใช่หลักฐานว่ายังไม่ติดตั้ง) → owner ดูที่ https://github.com/settings/installations ถ้ายังไม่มีให้ติดตั้งที่ https://github.com/apps/renovate | todo | owner | spec §Later; spec §Problem "Renovate is not installed" [ต้องยืนยัน] สถานะวันนี้ |
+| G3 | digest รายงานอย่างเดียว ไม่มีใครเปิด fix PR → Renovate เปิด PR แก้ (owner ตัดสิน 2026-11-28: ใช้ Renovate). 2026-11-28 ยังไม่ยืนยันว่าติดตั้ง app แล้วหรือยัง (ไม่พบ PR จาก `renovate[bot]` ใน owner `bookchaowalit` แต่ข้อนี้ไม่ใช่หลักฐานว่ายังไม่ติดตั้ง) → owner ดูที่ https://github.com/settings/installations (บัญชีส่วนตัว) และหน้า Settings → GitHub Apps ของแต่ละ organization ที่จะใช้ ถ้ายังไม่มีให้ติดตั้งที่ https://github.com/apps/renovate | todo | owner | spec §Later; spec §Problem "Renovate is not installed" [ต้องยืนยัน] สถานะวันนี้ |
 | G4 | ถ้า App ติดตั้งแบบเลือกบาง repo ระบบสแกนเฉพาะที่ `/installation/repositories` คืนมา และ `app_not_installed` ยังเป็น 0 → ระบุขอบเขตนี้ใน diagram และรายงานจำนวน repo ที่ไม่ได้สแกน (Codex review 2026-11-28, จดไว้แทนการวาดใหม่ตามที่ owner สั่ง) | todo | claude | `vuln_digest/github.py:109-120` |
 | G5 | diagram ไม่มีทางสำหรับรอบที่สแกนสำเร็จแต่ไม่พบ finding ทั้งที่ยังเทียบ state เดิมและแจ้ง finding ที่ปิดไป → เพิ่มทางนี้ (Codex review 2026-11-28, จดไว้แทนการวาดใหม่ตามที่ owner สั่ง) | todo | claude | `vuln_digest/run.py:43-66` |
 | G6 | To-Be ส่ง reminder ทุกการสแกนรายวันโดยไม่มีเงื่อนไขรอบสัปดาห์ (P3) → แสดงเงื่อนไข (Codex review 2026-11-28, จดไว้แทนการวาดใหม่ตามที่ owner สั่ง) | todo | claude | To-Be diagram `SWEEP` → `OLD` → `TG` |
+| G7 | To-Be ไม่ลองส่งข้อความค้างในรอบที่ไม่มี finding เปลี่ยนและไม่ถึงรอบเตือน ขัดกับ SPEC R7 → ส่งคิวค้างทุกรอบ (Codex review 2026-11-28, จดไว้แทนการวาดใหม่ตามที่ owner สั่ง) | todo | claude | `docs/specs/001-vuln-digest.md` R7 |
+| G8 | เมื่อส่ง Telegram ไม่สำเร็จและค้างเกิน 5 ข้อความ `dump_state()` เก็บแค่ 4 ข้อความล่าสุดพร้อมจำนวนที่ตัด → ใส่ขีดจำกัดนี้บนเส้นทาง (Codex review 2026-11-28, จดไว้แทนการวาดใหม่ตามที่ owner สั่ง) | todo | claude | `vuln_digest/report.py:30-37` |
+| G9 | To-Be ไม่แยกรอบแรก (ยังไม่มี `state.json`) ที่ต้องส่ง baseline หนึ่งข้อความเสมอ → แยกกรณีนี้ (Codex review 2026-11-28, จดไว้แทนการวาดใหม่ตามที่ owner สั่ง) | todo | claude | `docs/specs/001-vuln-digest.md` R3 |
 
 ## Open questions
 
