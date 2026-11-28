@@ -73,7 +73,7 @@ Sources: `docs/specs/001-vuln-digest.md` §Outcome, §Requirements R1–R7, §La
 |---|---|---|---|---|
 | G1 | ไม่มีการเตือนซ้ำ alert เก่า → reminder รายสัปดาห์ของ critical / high ที่ค้างเกิน 14 วัน | todo | claude | spec §Later; ไม่พบใน `vuln_digest/` |
 | G2 | ไม่มี audit event ต่อการเปลี่ยนแปลง → `security-api` audit event ต่อ finding ที่เปิด / ปิด (แบบ posture-monitor) | todo | claude | spec §Scope "Out of scope for v1", §Later |
-| G3 | digest รายงานอย่างเดียว ไม่มีใครเปิด fix PR → Renovate เปิด PR แก้ (owner ติดตั้ง app) | decide | owner | spec §Later; spec §Problem "Renovate is not installed" [ต้องยืนยัน] สถานะวันนี้ |
+| G3 | digest รายงานอย่างเดียว ไม่มีใครเปิด fix PR → Renovate เปิด PR แก้ (owner ตัดสิน 2026-11-28: ใช้ Renovate). 2026-11-28 ยังไม่ได้ติดตั้ง app: ไม่มี PR จาก `renovate[bot]` ใน owner `bookchaowalit` → owner ติดตั้งที่ https://github.com/apps/renovate | todo | owner | spec §Later; spec §Problem "Renovate is not installed" [ต้องยืนยัน] สถานะวันนี้ |
 
 ## Open questions
 
